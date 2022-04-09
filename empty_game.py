@@ -9,8 +9,8 @@ FPS = 30
 EPSILON = 0.0001
 FONT_SIZE = 20
 font = None
-sizeX = 26
-sizeY = 16
+sizeX = 40
+sizeY = 30
 
 
 def draw_string(dst, msg, p, color):
@@ -131,6 +131,7 @@ class Grid(object):
             for y in range (self.h):
                 if self.data[x][y] is not None:
                     self.data[x][y].Draw(screen,(FONT_SIZE*x,FONT_SIZE*y))
+
             
 
 class Entity(object):
@@ -145,7 +146,11 @@ class Entity(object):
 
     def update(self):
         return
-        
+
+class Wall(Entity):
+    def __init__(self,grid):
+        Entity.__init__(self,"X",grid)
+                
 
 class Player(Entity):
     def __init__ (self,grid):
@@ -206,31 +211,40 @@ class Player(Entity):
 class Mouse(Entity):
     def __init__ (self,grid):
         Entity.__init__(self,"a",grid)
-        self.stomachMax=4
+        self.stomachMax=6
         self.stomach=self.stomachMax
 
     def update(self,entities):
+        FW=0
+
         if self.stomach>0:
-            FW=random.randint(1,4)
-            if FW==1:
-               if self.location[0]-1 > 0 and self.grid.data[self.location[0]-1][self.location[1]] == None:
+            FW=random.randint(1,4)          
+            
+        if FW==1:
+            if self.location[0]-1 > 0 and self.grid.data[self.location[0]-1][self.location[1]] == None:
                     self.grid.MoveIt(self,(self.location[0]-1,self.location[1]))
-            elif FW==2:
-                if self.location[1]+1 < sizeY and self.grid.data[self.location[0]][self.location[1]+1] == None:
+        elif FW==2:
+            if self.location[1]+1 < sizeY and self.grid.data[self.location[0]][self.location[1]+1] == None:
                     self.grid.MoveIt(self,(self.location[0],self.location[1]+1))
-            elif FW==3:
-                if self.location[0]+1 < sizeX and self.grid.data[self.location[0]+1][self.location[1]] == None:
+        elif FW==3:
+            if self.location[0]+1 < sizeX and self.grid.data[self.location[0]+1][self.location[1]] == None:
                     self.grid.MoveIt(self,(self.location[0]+1,self.location[1]))
-            elif FW==4:
-                if self.location[1]-1 > 0 and self.grid.data[self.location[0]][self.location[1]-1] == None:
+        elif FW==4:
+            if self.location[1]-1 > 0 and self.grid.data[self.location[0]][self.location[1]-1] == None:
                     self.grid.MoveIt(self,(self.location[0],self.location[1]-1))
-        if 2 > random.randint (1,5):
+
+        if 5 > random.randint(1,20):
             self.stomach = self.stomach-1
 
+        if self.stomach==self.stomachMax*-1:
+            self.alive=False
+            
+
+        
     def feed(self,entities):
         self.stomach=self.stomachMax
         self.stomachMax=self.stomachMax+1
-        if self.stomachMax==20:
+        if self.stomachMax==24:
             if self.location[1]>0 and self.grid.data[self.location[0]][self.location[1]-1] == None:
                 mouse3=Mouse(self.grid)
                 self.grid.InsertIt(mouse3,(self.location[0],self.location[1]-1))
@@ -261,11 +275,18 @@ class Plant(Entity):
 
     def grow(self,entities):
         if self.location[1]>0 and self.grid.data[self.location[0]][self.location[1]-1] == None:
-            cheese2=Cheese(self.grid)
-            self.grid.InsertIt(cheese2,(self.location[0],self.location[1]-1))
-            entities+=[cheese2]
-            
-            
+            cheese1=Cheese(self.grid)
+            self.grid.InsertIt(cheese1,(self.location[0],self.location[1]-1))
+            entities+=[cheese1]
+        elif self.grid.data[self.location[0]][self.location[1]-2] == None:
+            cheese1=Cheese(self.grid)
+            self.grid.InsertIt(cheese1,(self.location[0],self.location[1]-2))
+            entities+=[cheese1] 
+        elif  self.grid.data[self.location[0]][self.location[1]-3] == None:
+            cheese1=Cheese(self.grid)
+            self.grid.InsertIt(cheese1,(self.location[0],self.location[1]-3))
+            entities+=[cheese1]
+ 
 
 
 class Cheese(Entity):
@@ -288,8 +309,13 @@ class Cheese(Entity):
             self.grid.MoveIt(self,(newX,newY))
         if self.location[1]==0:
             self.grid.MoveIt(self,(newX,newY))
+
         if self.location[1]==sizeY-1:
-            self.grid.MoveIt(self,(newX,newY))  
+            new_Plant=Plant(self.grid)
+            entities+=[new_Plant]
+            new_Plant.grid.InsertIt(new_Plant,(newX,newY))
+            self.alive=False
+            
 
         if self.size>0:
             if self.location[0]+1<sizeX and self.grid.data[self.location[0]+1][self.location[1]].__class__.__name__ == "Mouse":
@@ -349,13 +375,39 @@ def main():
     cheese1=Cheese(grid)
     plant1=Plant(grid)
     entities=[mouse1,mouse2,plant1,cheese1]
+    wallX=Wall(grid)
     
-    
-    grid.InsertIt(player,(8,4))
-    grid.InsertIt(plant1,(10,4))
-    grid.InsertIt(mouse1,(1,6))
-    grid.InsertIt(mouse2,(9,7))
+    grid.InsertIt(player,(10,4))
+    grid.InsertIt(plant1,(10,5))
+    grid.InsertIt(mouse1,(9,3))
+    grid.InsertIt(mouse2,(11,3))
     grid.InsertIt(cheese1,(10,3))
+
+    walls=sizeX
+    
+    while walls > 0:
+        grid.InsertIt(wallX,(walls-1,0))
+        walls=walls-1
+
+    walls=sizeY
+    while walls > 0:
+        grid.InsertIt(wallX,(0,walls-1))
+        grid.InsertIt(wallX,(sizeX-1,walls-1))
+        walls=walls-1
+
+  
+    walls=random.randint(5,20)
+    while walls > 0:
+        walls=walls-1
+        random.randint (1,sizeX)
+        X = random.randint (1,sizeX-2)
+        Y = random.randint (1,sizeY-2)
+        while grid.data[X][Y]!=None:
+            X = random.randint (1,sizeX-2)
+            Y = random.randint (1,sizeY-2)
+        grid.InsertIt(wallX,(X,Y))
+        
+
 
 
     while running:
